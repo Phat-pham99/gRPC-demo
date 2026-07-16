@@ -10,8 +10,8 @@ message TelemetryRequest {
   string device_id = 1;
   double temperature = 2;
   double humidity = 3;
-  int64 timestamp = 4;
-  string status_payload = 5; 
+  string timestamp = 4;
+  bytes status_payload = 5;
 }
 
 message TelemetryResponse {
