@@ -1,0 +1,33 @@
+version: '3.8'
+
+services:
+  fastapi_service:
+    build:
+      context: .
+      dockerfile: FastAPI-service/Dockerfile
+    container_name: fastapi_service
+    ports:
+      - "8000:8000"   # REST Engine Port
+      - "50051:50051" # gRPC Engine Port
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+  nestjs_service:
+    build:
+      context: .
+      dockerfile: nestjs-service/Dockerfile
+    container_name: nestjs_service
+    ports:
+      - "3000:3000"   # WebSocket Entrypoint
+    environment:
+      - MODE=grpc # Switch to 'rest' or 'grpc' to execute your benchmark phases
+    depends_on:
+      - fastapi_service
+    networks:
+      - iot_network
+    restart: unless-stopped
+
+networks:
+  iot_network:
+    driver: bridge
