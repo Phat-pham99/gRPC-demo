@@ -15,4 +15,4 @@ RUN python3 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. iot_data
 EXPOSE 8000
 EXPOSE 50051
 
-CMD ["python3", "main.py"]
+CMD ["python3","-u", "main.py"]

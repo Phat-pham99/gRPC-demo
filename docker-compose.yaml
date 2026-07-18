@@ -1,11 +1,10 @@
-version: '3.8'
-
 services:
   fastapi_service:
     build:
       context: ./FastAPI-service
       dockerfile: Dockerfile
     container_name: fastapi_service
+    # Keep external ports if you need access from your host machine (browser/Postman)
     ports:
       - "8000:8000"   # REST Engine Port
       - "50051:50051" # gRPC Engine Port
@@ -21,7 +20,10 @@ services:
     ports:
       - "3000:3000"   # WebSocket Entrypoint
     environment:
+      - PYTHONUNBUFFERED=1
       - MODE=grpc # Switch to 'rest' or 'grpc' to execute your benchmark phases
+      - REST_API_URL=http://fastapi_service:8000
+      - GRPC_API_URL=fastapi_service:50051
     depends_on:
       - fastapi_service
     networks:
