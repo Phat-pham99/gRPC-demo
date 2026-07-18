@@ -11,12 +11,15 @@ import { TelemetryGateway } from './telemetry.gateway';
         transport: Transport.GRPC,
         options: {
           package: 'iot',
-          protoPath: join(process.cwd(), 'iot_data.proto'),
+          protoPath: join(process.cwd(), './iot_data.proto'),
           url: '127.0.0.1:50051',
+          loader: {
+            keepCase: true,
+          },
           channelOptions: {
             // Force the single connection pipe to stay alive permanently under stress
-            'grpc.keepalive_time_ms': 60000,
-            'grpc.keepalive_timeout_ms': 20000,
+            'grpc.keepalive_time_ms': 120000,
+            'grpc.keepalive_timeout_ms': 60000,
             // Increase internal timeout thresholds to give the engine queue time to breath
             'grpc.http2.min_time_between_pings_ms': 10000,
             'grpc.http2.max_pings_without_data': 0,
