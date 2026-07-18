@@ -6,13 +6,13 @@ WORKDIR /app
 RUN pip install --no-cache-dir fastapi uvicorn grpcio grpcio-tools pydantic
 
 # Copy source and shared proto contract
-COPY FastAPI-service/main.py .
+COPY main.py .
 COPY iot_data.proto .
 
 # Compile protobuf stubs directly inside the container environment
-RUN python -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. iot_data.proto
+RUN python3 -m grpc_tools.protoc -I. --python_out=. --grpc_python_out=. iot_data.proto
 
 EXPOSE 8000
 EXPOSE 50051
 
-CMD ["python", "main.py"]
+CMD ["python3", "main.py"]

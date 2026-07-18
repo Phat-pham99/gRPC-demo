@@ -15,8 +15,6 @@ RUN npm run build
 FROM node:26-alpine
 WORKDIR /usr/src/app
 
-COPY package.json .
-
 COPY --from=builder /usr/src/app/dist ./dist
 COPY --from=builder /usr/src/app/node_modules ./node_modules
 COPY ./iot_data.proto /usr/src/app/iot_data.proto
