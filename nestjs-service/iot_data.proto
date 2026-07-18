@@ -6,12 +6,16 @@ service IotService {
   rpc SendTelemetry (TelemetryRequest) returns (TelemetryResponse);
 }
 
+service IotServiceStream {
+  rpc SendTelemetry (stream TelemetryRequest) returns (TelemetryResponse);
+}
+
 message TelemetryRequest {
   string device_id = 1;
   double temperature = 2;
   double humidity = 3;
   string timestamp = 4;
-  string status_payload = 5; 
+  string status_payload = 5;
 }
 
 message TelemetryResponse {

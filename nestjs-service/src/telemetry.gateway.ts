@@ -1,76 +1,96 @@
 import { WebSocketGateway, SubscribeMessage, MessageBody } from '@nestjs/websockets';
-import { Inject, OnModuleInit } from '@nestjs/common';
+import { Inject, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import { ClientGrpc } from '@nestjs/microservices';
-import { Metadata } from '@grpc/grpc-js';
 import axios from 'axios';
-import { Observable, lastValueFrom } from 'rxjs';
+import { Observable, Subject } from 'rxjs';
 
 interface TelemetryPayload {
   device_id: string;
   temperature: number;
   humidity: number;
-  timestamp: number;
-  status_payload: string;
+  timestamp: number | string;
+  status_payload: string; // Incoming WebSocket payload delivers this as a string
 }
 
 interface gRPCTelemetryPayload {
   device_id: string;
   temperature: number;
   humidity: number;
-  timestamp: number;
-  status_payload: Buffer<ArrayBufferLike>;
+  timestamp: string;
+  status_payload: string; // Changed to Buffer to fulfill proto 'bytes' requirement
 }
 
-interface IotService {
-  sendTelemetry(data: TelemetryPayload): Observable<any>;
+interface TelemetryResponse {
+  success: boolean;
+  message: string;
+}
+
+// Updated to target the streaming service definition
+interface IotServiceStream {
+  SendTelemetry(data: Observable<gRPCTelemetryPayload>): Observable<TelemetryResponse>;
 }
 
 @WebSocketGateway()
-export class TelemetryGateway implements OnModuleInit {
-  // 1. Fixed with "!" operator to tell TS it's initialized onModuleInit
-  private iotService!: IotService;
-  
-  // 2. Will resolve fine once @types/node is installed
+export class TelemetryGateway implements OnModuleInit, OnModuleDestroy {
+  private iotServiceStream!: IotServiceStream;
   private useGrpc = process.env.MODE === 'grpc';
+  private Restful_URL: string = process.env.REST_API_URL || "http://127.0.0.1:8000";
+
+  // The bridge between WebSocket events and the gRPC client stream
+  private IotServiceStream$ = new Subject<gRPCTelemetryPayload>();
 
   constructor(@Inject('IOT_PACKAGE') private client: ClientGrpc) {}
 
   onModuleInit() {
-    this.iotService = this.client.getService<IotService>('IotService');
-    console.log(`\n>>> [Gateway] API channel loaded in [${this.useGrpc ? 'gRPC' : 'REST'}] mode. <<<\n`);
-  }
+    if (this.useGrpc) {
+      try {
+      this.iotServiceStream = this.client.getService<IotServiceStream>('IotServiceStream');
+
+      // Initialize and subscribe to the long-lived gRPC stream connection
+      this.iotServiceStream.SendTelemetry(this.IotServiceStream$.asObservable()).subscribe({
+        next: (response) => console.log('gRPC Stream Response:', response),
+        error: (err) => console.error('gRPC Stream Error:', err),
+        complete: () => console.log('gRPC Stream Connection ended.'),
+      });
+    console.log(`\n>>> [Gateway] API channel loaded in [${this.useGrpc ? 'gRPC Stream' : 'REST'}] mode. <<<\n`);
+    } catch (e) {
+      console.error(e)
+    } finally {
+      console.log("Bruh")
+    }
+  }}
 
   @SubscribeMessage('telemetry')
   async handleTelemetry(@MessageBody() payload: TelemetryPayload) {
     if (this.useGrpc) {
-    // Convert the string into a raw binary buffer so gRPC maps it to 'bytes'
-    const gRpcPayload: TelemetryPayload = {
-      ...payload,
-      status_payload: payload.status_payload,
-    };
-    try {
-      const metadata = new Metadata();
-      
-      // Define a 60-second deadline from right now
-      const deadline = new Date(Date.now() + 60000);
+      try {
+        // Map incoming WS payload to match the gRPC .proto expected data types
+        const gRpcPayload: gRPCTelemetryPayload = {
+          device_id: String(payload.device_id),
+          temperature: payload.temperature,
+          humidity: payload.humidity,
+          timestamp: String(payload.timestamp),
+          status_payload: String(payload.status_payload),
+        };
 
-      // NestJS ClientGrpc allows passing Metadata as the 2nd argument.
-      // To attach the deadline, we pass it inside the Options object as the 3rd argument, 
-      // BUT we must cast the service interface to 'any' to satisfy the strict TS compiler hook.
-      await lastValueFrom(
-        this.iotService.sendTelemetry(gRpcPayload as any)
-      );
-      // await (this.iotService as any).sendTelemetry(payload, metadata, { deadline });
-    } catch (err) {
-        console.error('gRPC Pipeline Error', err);
+        // Push data onto the active gRPC connection stream
+        this.IotServiceStream$.next(gRpcPayload);
+      } catch (err) {
+        console.error('Failed to stream data point via gRPC pipeline:', err);
       }
     } else {
       try {
-        // Double check this URL handles 'service_b' if running in Docker containers!
-        await axios.post('http://127.0.0.1:8000/api/telemetry', payload);
+        await axios.post(this.Restful_URL + "/api/telemetry", payload);
       } catch (err) {
         console.error('REST Pipeline Error', err);
       }
+    }
+  }
+
+  // Gracefully clean up the connection stream when the gateway tears down
+  onModuleDestroy() {
+    if (this.IotServiceStream$) {
+      this.IotServiceStream$.complete();
     }
   }
 }
