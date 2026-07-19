@@ -1,3 +1,4 @@
+import time
 import asyncio
 import grpc
 import uvicorn
@@ -21,8 +22,9 @@ class TelemetryPayload(BaseModel):
 
 # Simulated High-Performance DB Write Overhead
 async def save_to_db(count, device_id: str, temp: float, hum: float, ts: str, payload: bytes):
+    process_time: int = time.time_ns() - ts #Delta time took to process this data package
     # Print statement showing the incoming decoded elements
-    print(f"[DB Write] Frame #{count} | Device: {device_id} | Temp: {temp}°C | Status Bytes: {len(payload)}", flush=True)
+    print(f"[DB Write] Frame #{count} | Delta time: {process_time} | Payload Bytes: {len(payload)}", flush=True)
     return count + 1
 
 # --- PATH A: REST Endpoints ---

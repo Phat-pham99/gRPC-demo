@@ -9,7 +9,6 @@ import os
 # 5KB string block mimicking heavy binary metric tables / raw telemetry dumps
 RAW_BYTES: str = os.urandom(1024 * 3)
 BIG_PAYLOAD_STRING: str = base64.b64encode(RAW_BYTES).decode('utf-8')
-# BIG_PAYLOAD_STRING: str = base64.b64encode(RAW_BYTES)
 DEVICE_NUMBER: int = 20
 PACKAGE_NUMBER: int = 1000
 DELAY: int  = 0.01
@@ -17,18 +16,18 @@ DELAY: int  = 0.01
 async def run_device_simulation(device_id: int):
     uri = "ws://127.0.0.1:3000"
     async with websockets.connect(uri) as websocket:
-        for _ in range(PACKAGE_NUMBER + 1):
+        for i in range(PACKAGE_NUMBER + 1):
             payload = {
-                "device_id": "sensor_node",
+                "device_id": f"device_id_{device_id}",
                 "temperature": round(random.uniform(18.0, 38.0), 2),
                 "humidity": round(random.uniform(30.0, 80.0), 2),
-                "timestamp": int(time.time() * 1000),
+                "timestamp": int(time.time_ns()),
                 "status_payload": BIG_PAYLOAD_STRING
             }
             # Wrap standard JSON frame expected by NestJS WsAdapter
             frame = {"event": "telemetry", "data": payload};
-            result = await websocket.send(json.dumps(frame))
-            await asyncio.sleep(0.01)
+            await websocket.send(json.dumps(frame))
+            await asyncio.sleep(0.005)
 
 async def main():
     print(f"Initializing {DEVICE_NUMBER} Simulated IoT System Devices...")
