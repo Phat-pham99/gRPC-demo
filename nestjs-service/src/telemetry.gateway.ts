@@ -33,7 +33,7 @@ interface IotServiceStream {
 @WebSocketGateway()
 export class TelemetryGateway implements OnModuleInit, OnModuleDestroy {
   private iotServiceStream!: IotServiceStream;
-  private useGrpc = process.env.MODE === 'grpc';
+  private useGrpc: boolean = process.env.MODE === 'grpc';
   private Restful_URL: string = process.env.REST_API_URL || "http://127.0.0.1:8000";
 
   // The bridge between WebSocket events and the gRPC client stream

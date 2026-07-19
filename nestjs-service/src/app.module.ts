@@ -12,7 +12,7 @@ import { TelemetryGateway } from './telemetry.gateway';
         options: {
           package: 'iot',
           protoPath: join(process.cwd(), './iot_data.proto'),
-          url: '127.0.0.1:50051',
+          url: process.env.GRPC_API_URL,
           loader: {
             keepCase: true,
           },
