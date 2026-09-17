@@ -21,9 +21,8 @@ class TelemetryPayload(BaseModel):
     status_payload: str
 
 # Simulated High-Performance DB Write Overhead
-async def save_to_db(count, device_id: str, temp: float, hum: float, ts: str, payload: bytes):
-    process_time: int = time.time_ns() - int(ts) #Delta time took to process this data package
-    # Print statement showing the incoming decoded elements
+async def save_to_db(count, device_id: str, temp: float, hum: float, ts: str, payload: str):
+    process_time: int = time.time_ns() - int(ts)  # Delta time took to process this data package
     print(f"[DB Write] Frame #{count} | Delta time: {process_time} | Payload Bytes: {len(payload)}", flush=True)
     return count + 1
 
@@ -49,7 +48,6 @@ class IotServiceServicer(iot_data_pb2_grpc.IotServiceServicer):
         
     async def SendTelemetry(self, request, context):
         print(request, flush=True)
-        # print( request.device_id.decode('utf-8'))
 
         self.COUNT = await save_to_db(
             self.COUNT,
@@ -59,7 +57,7 @@ class IotServiceServicer(iot_data_pb2_grpc.IotServiceServicer):
             request.timestamp,
             request.status_payload
         )
-        print(f"count: {COUNT}", flush=True)
+        print(f"count: {self.COUNT}", flush=True)
         return iot_data_pb2.TelemetryResponse(success=True, message=f"Saved via Unary gRPC. Total: {self.COUNT}")
 
 # --- PATH C: Client-Streaming gRPC Servicer Implementation ---
@@ -82,7 +80,7 @@ class IotServiceStreamServicer(iot_data_pb2_grpc.IotServiceStreamServicer):
                 request.timestamp,
                 request.status_payload
             )
-        print(f"count: {COUNT}", flush=True)
+        print(f"count: {self.COUNT}", flush=True)
         print(f"[Stream] Finished stream. Processed {frames_received} frames sequentially.", flush=True)
         
         # Return a single response back to the NestJS Gateway after stream completes

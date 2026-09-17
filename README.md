@@ -105,16 +105,16 @@ flowchart LR
 ```text
 gRPC-demo/
 ├── docker-compose.yaml          # Service orchestration and environment
-├── iot_data.proto               # Shared Protobuf contract (source of truth)
+├── iot_data.proto               # Shared Protobuf contract (single source of truth)
 ├── iot_simulation.py            # Host-side load generator
+├── .dockerignore                # Build context hygiene for both services
 ├── .gitignore
 ├── FastAPI-service/
-│   ├── Dockerfile               # Multi-stage Python build with protoc compilation
-│   ├── iot_data.proto           # Proto copy (compiled at build time)
+│   ├── Dockerfile               # Multi-stage Python build, compiles proto from root
+│   ├── requirements.txt         # Pinned Python dependencies
 │   └── main.py                  # REST endpoints + gRPC unary/stream servicers
 └── nestjs-service/
-    ├── Dockerfile               # Multi-stage Node.js build
-    ├── iot_data.proto           # Proto copy (runtime reflection)
+    ├── Dockerfile               # Multi-stage Node.js build, copies proto from root
     ├── package.json
     └── src/
         ├── main.ts              # HTTP server + WebSocket adapter binding
@@ -243,7 +243,9 @@ pip install websockets
 python iot_simulation.py
 ```
 
-The simulator connects to `ws://127.0.0.1:3000`. Ensure the NestJS gateway port is reachable from your host.
+The simulator connects to `ws://127.0.0.1:3000` by default. Override via the
+`WS_URL`, `DEVICE_NUMBER`, `PACKAGE_NUMBER`, and `DELAY` environment variables
+when targeting a remote gateway.
 
 ### Expected Output
 
@@ -289,14 +291,15 @@ Re-run the simulator for each mode and compare:
 | `GRPC_API_URL` | `fastapi_service:50051` | gRPC endpoint (Docker internal DNS) |
 | `PYTHONUNBUFFERED` | `1` | Unbuffered stdout for container logging |
 
-### Simulator Parameters (hardcoded in `iot_simulation.py`)
+### Simulator Parameters (env-overridable; defaults shown)
 
-| Name | Value | Description |
-|------|-------|-------------|
+| Name | Default | Description |
+|------|---------|-------------|
+| `WS_URL` | `ws://127.0.0.1:3000` | WebSocket gateway URL |
 | `DEVICE_NUMBER` | `20` | Concurrent virtual devices |
 | `PACKAGE_NUMBER` | `1000` | Frames per device (the loop runs `range(PACKAGE_NUMBER + 1)`, yielding **1,001 frames per device**) |
+| `DELAY` | `0.005` | Seconds between frames per device |
 | `RAW_BYTES` | `os.urandom(1024 * 3)` | 3 KB random payload, Base64-encoded to ~4 KB |
-| `DELAY` | `0.01` | Loop variable (unused in the current `asyncio.sleep(0.005)` pacing) |
 
 ### gRPC Channel Options
 
@@ -332,7 +335,7 @@ Defined in `nestjs-service/src/app.module.ts`:
 
 - **Total frames**: 20 devices x 1,001 frames = **20,020 frames**.
 - **Payload size**: ~4 KB per frame (Base64-encoded 3 KB random block).
-- **Simulator pacing**: `asyncio.sleep(0.005)` between frames, not the `DELAY` constant.
+- **Simulator pacing**: `DELAY` seconds between frames per device (default `0.005`).
 - **No persistence layer**: The "DB write" is a `print()` + counter increment to keep the benchmark CPU-bound and reproducible across environments.
 
 ---

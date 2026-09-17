@@ -17,7 +17,7 @@ interface gRPCTelemetryPayload {
   temperature: number;
   humidity: number;
   timestamp: string;
-  status_payload: string; // Changed to Buffer to fulfill proto 'bytes' requirement
+  status_payload: string;
 }
 
 interface TelemetryResponse {
@@ -42,23 +42,24 @@ export class TelemetryGateway implements OnModuleInit, OnModuleDestroy {
   constructor(@Inject('IOT_PACKAGE') private client: ClientGrpc) {}
 
   onModuleInit() {
-    if (this.useGrpc) {
-      try {
-      this.iotServiceStream = this.client.getService<IotServiceStream>('IotServiceStream');
+    if (!this.useGrpc) {
+      console.log('\n>>> [Gateway] API channel loaded in REST mode. <<<\n');
+      return;
+    }
 
-      // Initialize and subscribe to the long-lived gRPC stream connection
-      this.iotServiceStream.SendTelemetry(this.IotServiceStream$.asObservable()).subscribe({
+    this.iotServiceStream = this.client.getService<IotServiceStream>('IotServiceStream');
+
+    // Initialize and subscribe to the long-lived gRPC stream connection
+    this.iotServiceStream
+      .SendTelemetry(this.IotServiceStream$.asObservable())
+      .subscribe({
         next: (response) => console.log('gRPC Stream Response:', response),
         error: (err) => console.error('gRPC Stream Error:', err),
         complete: () => console.log('gRPC Stream Connection ended.'),
       });
-    console.log(`\n>>> [Gateway] API channel loaded in [${this.useGrpc ? 'gRPC Stream' : 'REST'}] mode. <<<\n`);
-    } catch (e) {
-      console.error(e)
-    } finally {
-      console.log("Bruh")
-    }
-  }}
+
+    console.log('\n>>> [Gateway] API channel loaded in gRPC Stream mode. <<<\n');
+  }
 
   @SubscribeMessage('telemetry')
   async handleTelemetry(@MessageBody() payload: TelemetryPayload) {

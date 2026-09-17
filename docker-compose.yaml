@@ -1,10 +1,8 @@
-version: '3.8'
-
 services:
   fastapi_service:
     build:
-      context: ./FastAPI-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: FastAPI-service/Dockerfile
     container_name: fastapi_service
     # Keep external ports if you need access from your host machine (browser/Postman)
     ports:
@@ -13,11 +11,17 @@ services:
     networks:
       - iot_network
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python3", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/docs')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
 
   nestjs_service:
     build:
-      context: ./nestjs-service
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: nestjs-service/Dockerfile
     container_name: nestjs_service
     ports:
       - "3000:3000"   # WebSocket Entrypoint
@@ -27,7 +31,8 @@ services:
       - REST_API_URL=http://fastapi_service:8000
       - GRPC_API_URL=fastapi_service:50051
     depends_on:
-      - fastapi_service
+      fastapi_service:
+        condition: service_healthy
     networks:
       - iot_network
     restart: unless-stopped

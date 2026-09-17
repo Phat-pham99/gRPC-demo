@@ -1,0 +1,13 @@
+.git
+.gitignore
+PLAN.md
+README.md
+docker-compose.yaml
+iot_simulation.py
+**/__pycache__
+**/*.pyc
+**/node_modules
+**/dist
+**/coverage
+.venv
+*.log
