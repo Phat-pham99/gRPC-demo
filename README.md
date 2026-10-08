@@ -13,6 +13,7 @@
 ## Table of Contents
 
 - [Overview](#overview)
+- [Presentation](#presentation)
 - [Why This Matters](#why-this-matters)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
@@ -36,6 +37,22 @@ This project demonstrates a complete IoT telemetry pipeline built to benchmark t
 - **REST POST** over HTTP/1.1
 
 Both paths carry the same payload shapes, enabling an apples-to-apples comparison of serialization overhead, connection reuse, and throughput under load.
+
+---
+
+## Presentation
+
+A full slide deck walking through the motivation, architecture, and benchmark results of this project is included in the repository:
+
+**[📊 GRPC.pptx — gRPC vs REST IoT Telemetry Benchmark](GRPC.pptx)**
+
+> GitHub does not render PowerPoint files inline. Click the link above to download the deck, or [view it directly](https://view.officeapps.live.com/op/view.aspx?src=) with the Microsoft Office online viewer after hosting the file.
+
+The presentation covers:
+
+- Why transport choice matters for high-throughput IoT ingestion
+- The gRPC (HTTP/2 client-streaming) vs. REST (HTTP/1.1) architecture
+- Live benchmark methodology and observed results
 
 ---
 
